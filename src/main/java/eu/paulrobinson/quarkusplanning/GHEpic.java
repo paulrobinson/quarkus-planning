@@ -1,6 +1,9 @@
 package eu.paulrobinson.quarkusplanning;
 
 import org.kohsuke.github.GHIssue;
+import org.kohsuke.github.GHIssueState;
+import org.kohsuke.github.GHMilestone;
+import org.kohsuke.github.GHRepository;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,6 +25,14 @@ public class GHEpic {
         for (String line : issueBody.split(System.getProperty("line.separator"))) {
             childIssues.addAll(extractIssueIds(line));
         }
+    }
+
+    public static List<GHEpic> loadOpenEpics(GHRepository repo, GHMilestone milestone) throws IOException {
+        List<GHEpic> allEpics = new ArrayList<>();
+        for (GHIssue issue : repo.getIssues(GHIssueState.OPEN, milestone)) {
+            allEpics.add(new GHEpic(issue));
+        }
+        return allEpics;
     }
 
     private List<GHIssue> extractIssueIds(String text) throws IOException {
