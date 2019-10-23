@@ -4,7 +4,9 @@ import org.kohsuke.github.*;
 import sun.java2d.loops.MaskFill;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class FindAssignees {
 
@@ -32,6 +34,20 @@ public class FindAssignees {
                     System.out.println("#" + issue.getNumber() + " " + issue.getTitle());
                 }
             }
+        }
+
+        Set<String> assignees = new HashSet<>();
+        for (GHEpic epic : allEpics) {
+            for (GHIssue issue : epic.getChildIssues()) {
+                if (issue.getAssignee() != null && issue.getState().equals(GHIssueState.OPEN)) {
+                    assignees.add(issue.getAssignee().getName());
+                }
+            }
+        }
+
+        System.out.println("\n\n\n*** Users with work assigned ***");
+        for (String user : assignees) {
+            System.out.println(user);
         }
 
     }
