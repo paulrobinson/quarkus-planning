@@ -24,11 +24,11 @@ public class FindAssignees {
 
         List<GHEpic> allEpics = GHEpic.loadOpenEpics(quarkusRepo, quarkusRepo.getMilestone(MILESTONE_1_0_0));
 
-        System.out.println("\n\n\n*** Issues with no assignee ***");
+        System.out.println("\n\n\n*** Open issues with no assignee ***");
         for (GHEpic epic : allEpics) {
             System.out.println("\n\n== #" + epic.getEpicIssue().getNumber() + " " + epic.getEpicIssue().getTitle() + " ==");
             for (GHIssue issue : epic.getChildIssues()) {
-                if (issue.getAssignee() == null) {
+                if (issue.getAssignee() == null && issue.getState().equals(GHIssueState.OPEN)) {
                     System.out.println("#" + issue.getNumber() + " " + issue.getTitle());
                 }
             }
