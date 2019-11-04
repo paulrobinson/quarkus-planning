@@ -16,12 +16,13 @@ public class GenerateReport {
 
     public static void main(String[] args) throws Exception {
 
+        System.out.println("Connecting...");
         GitHub github = GitHub.connect();
 
         GHOrganization org =  github.getOrganization(GH_ORGANIZATION);
         GHRepository quarkusRepo = org.getRepository(GH_REPO);
 
-
+        System.out.println("Loading...");
         List<GHEpic> allEpics = GHEpic.loadOpenEpics(quarkusRepo, quarkusRepo.getMilestone(MILESTONE_1_0_0));
 
         userWorkReport(allEpics);
@@ -32,7 +33,7 @@ public class GenerateReport {
 
     }
 
-    private static void findChecklistSatusMismatches(List<GHEpic> allEpics) {
+    public static void findChecklistSatusMismatches(List<GHEpic> allEpics) {
         System.out.println("\n\n\n*** Epics with mismatched checkboxes ***");
         for (GHEpic epic : allEpics) {
             for (GHSubTask subTask : epic.getSubTasks()) {
@@ -47,7 +48,7 @@ public class GenerateReport {
         }
     }
 
-    private static void epicSummaryReport(List<GHEpic> allEpics) {
+    public static void epicSummaryReport(List<GHEpic> allEpics) {
         System.out.println("\n\n\n*** Epic Summary ***");
         for (GHEpic epic : allEpics) {
             System.out.println("\n= " + epic.getTitle());
@@ -63,7 +64,7 @@ public class GenerateReport {
         }
     }
 
-    private static void userWorkReport(List<GHEpic> allEpics) throws IOException {
+    public static void userWorkReport(List<GHEpic> allEpics) throws IOException {
         System.out.println("\n\n\n*** Open issues with no assignee ***");
         for (GHEpic epic : allEpics) {
             System.out.println("\n\n== #" + epic.getEpicIssue().getNumber() + " " + epic.getEpicIssue().getTitle() + " ==");
