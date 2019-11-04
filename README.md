@@ -2,8 +2,8 @@ Steps to use this
 
 * Visit https://github.com/settings/tokens/new and create a new token. Don't check any boxes, basic read-only is all that is required
 * Set the token in ~/.github. E.g add `oauth=abcde12345abcde12345abcde12345`
-* Run `eu.paulrobinson.quarkusplanning.FindAssignees` from your IDE
-* Observe a report of which issues are left unnasigned from the hard-coded list of epics in `eu.paulrobinson.quarkusplanning.FindAssignees`
+* Run `eu.paulrobinson.quarkusplanning.GenerateReport` from your IDE
+* Observe a report of which issues are left unnasigned from the hard-coded list of epics in `eu.paulrobinson.quarkusplanning.GenerateReport`
 
 
 Example report:
