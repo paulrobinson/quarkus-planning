@@ -1,5 +1,6 @@
 package eu.paulrobinson.quarkusplanning;
 
+import eu.paulrobinson.quarkusplanning.github.GitHubConnection;
 import org.kohsuke.github.*;
 
 import java.io.IOException;
@@ -9,29 +10,31 @@ public class GenerateReport {
 
     public static final String GH_ORGANIZATION = "quarkusio";
     public static final String GH_REPO = "quarkus";
-    public static final String GH_REPO_URL = "https://github.com/" + GH_ORGANIZATION + "/" + GH_REPO;
-
 
     public static final int MILESTONE_1_0_0 = 38;
 
+    public GenerateReport() {
+
+    }
+
     public static void main(String[] args) throws Exception {
 
-        System.out.println("Connecting...");
-        GitHub github = GitHub.connect();
-
-        GHOrganization org =  github.getOrganization(GH_ORGANIZATION);
-        GHRepository quarkusRepo = org.getRepository(GH_REPO);
-
-        System.out.println("Loading...");
-        List<GHEpic> allEpics = GHEpic.loadOpenEpics(quarkusRepo, quarkusRepo.getMilestone(MILESTONE_1_0_0));
+        List<GHEpic> allEpics = getEpics();
 
         userWorkReport(allEpics);
-
         epicSummaryReport(allEpics);
-
         findChecklistSatusMismatches(allEpics);
 
     }
+
+    public static void loadData() throws QuarkusPlanningException {
+        GitHubConnection.loadOpenEpics(GH_ORGANIZATION, GH_REPO, MILESTONE_1_0_0);
+    }
+
+    public static List<GHEpic> getEpics() throws QuarkusPlanningException {
+        return GitHubConnection.loadOpenEpics(GH_ORGANIZATION, GH_REPO, MILESTONE_1_0_0);
+    }
+
 
     public static void findChecklistSatusMismatches(List<GHEpic> allEpics) {
         System.out.println("\n\n\n*** Epics with mismatched checkboxes ***");
@@ -49,10 +52,14 @@ public class GenerateReport {
     }
 
     public static void epicSummaryReport(List<GHEpic> allEpics) {
-        System.out.println("\n\n\n*** Epic Summary ***");
+        System.out.println("\n\n\n*** Epic Summary (Open issues) ***");
         for (GHEpic epic : allEpics) {
             System.out.println("\n= " + epic.getTitle());
             for (GHSubTask subTask : epic.getSubTasks()) {
+
+                if (subTask.isChecked()) {
+                    continue;
+                }
 
                 Integer issueID = null;
                 if (subTask.getLinkedGHIssue() != null) {
