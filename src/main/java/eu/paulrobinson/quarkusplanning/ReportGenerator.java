@@ -3,36 +3,36 @@ package eu.paulrobinson.quarkusplanning;
 import eu.paulrobinson.quarkusplanning.github.GitHubConnection;
 import org.kohsuke.github.*;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
 
-public class GenerateReport {
+@Singleton
+public class ReportGenerator {
 
-    public static final String GH_ORGANIZATION = "quarkusio";
-    public static final String GH_REPO = "quarkus";
+    @Inject GitHubConnection gitHubConnection;
 
-    public static final int MILESTONE_1_0_0 = 38;
-
-    public GenerateReport() {
+    public ReportGenerator() {
 
     }
 
-    public static void main(String[] args) throws Exception {
+    public void dumpReport() throws Exception {
 
         List<GHEpic> allEpics = getEpics();
 
-        userWorkReport(allEpics);
-        epicSummaryReport(allEpics);
+        //userWorkReport(allEpics);
+        //epicSummaryReport(allEpics);
         findChecklistSatusMismatches(allEpics);
 
     }
 
-    public static void loadData() throws QuarkusPlanningException {
-        GitHubConnection.loadOpenEpics(GH_ORGANIZATION, GH_REPO, MILESTONE_1_0_0);
+    public void loadData() throws QuarkusPlanningException {
+        gitHubConnection.loadOpenEpics();
     }
 
-    public static List<GHEpic> getEpics() throws QuarkusPlanningException {
-        return GitHubConnection.loadOpenEpics(GH_ORGANIZATION, GH_REPO, MILESTONE_1_0_0);
+    public List<GHEpic> getEpics() throws QuarkusPlanningException {
+        return gitHubConnection.loadOpenEpics();
     }
 
 

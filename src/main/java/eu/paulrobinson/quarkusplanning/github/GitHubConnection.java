@@ -5,6 +5,8 @@ import eu.paulrobinson.quarkusplanning.GHSubTask;
 import eu.paulrobinson.quarkusplanning.QuarkusPlanningException;
 import org.kohsuke.github.*;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,13 +14,19 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Singleton
 public class GitHubConnection {
 
-    private static List<GHEpic> cachedEpics;
+    @Inject
+    public GHRepositoryLookupCache ghRepositoryLookupCache;
 
-    private static ReentrantLock loadLock = new ReentrantLock();
+    public static final String QUERY_ALL_EPICS = "org:quarkusio is:open label:Epic";
 
-    public static List<GHEpic> loadOpenEpics(String organization, String repository, int milestone) throws QuarkusPlanningException {
+    private List<GHEpic> cachedEpics;
+
+    private ReentrantLock loadLock = new ReentrantLock();
+
+    public List<GHEpic> loadOpenEpics() throws QuarkusPlanningException {
 
         try {
             loadLock.lock();
@@ -27,42 +35,32 @@ public class GitHubConnection {
                 return cachedEpics;
             }
 
-            try {
-                GitHub github = GitHub.connect();
-                GHOrganization ghOrg =  github.getOrganization(organization);
-                GHRepository ghRepo = ghOrg.getRepository(repository);
-                GHMilestone ghMilestone = ghRepo.getMilestone(milestone);
-
-                List<GHEpic> epicsToReturn = new ArrayList<>();
-
-                List<GHIssue> issues = loadEpicIssues(ghRepo, ghMilestone);
-                for (GHIssue issue : issues) {
-                    List<GHSubTask> subTasks = parseSubTasksFromDescription(issue);
-                    epicsToReturn.add(new GHEpic(issue, subTasks));
-                }
-
-                cachedEpics = epicsToReturn;
-
-                return epicsToReturn;
-            } catch (IOException e) {
-                throw new QuarkusPlanningException("Error connecting to GitHub and loading issue data", e);
+            List<GHEpic> epicsToReturn = new ArrayList<>();
+            for (GHIssue issue : loadAllEpicIssues()) {
+                List<GHSubTask> subTasks = parseSubTasksFromDescription(issue);
+                epicsToReturn.add(new GHEpic(issue, subTasks));
             }
-        } finally {
+            cachedEpics = epicsToReturn;
+
+            return epicsToReturn;
+        }
+        finally {
             loadLock.unlock();
         }
     }
 
-    public static void clearCache() {
+    public void clearCache() {
         cachedEpics = null;
     }
 
-    private static List<GHIssue> loadEpicIssues(GHRepository repo, GHMilestone milestone) throws QuarkusPlanningException {
+    private  List<GHIssue> loadAllEpicIssues() throws QuarkusPlanningException {
         try {
+            GitHub github = GitHub.connect();
+            GHIssueSearchBuilder searchBuilder = github.searchIssues().isOpen().q(QUERY_ALL_EPICS);
+
             List<GHIssue> issuesToReturn = new ArrayList<>();
-            for (GHIssue issue : repo.getIssues(GHIssueState.OPEN, milestone)) {
-                if (isEpic(issue)) {
-                    issuesToReturn.add(issue);
-                }
+            for (GHIssue issue : searchBuilder.list()) {
+                issuesToReturn.add(issue);
             }
             return issuesToReturn;
         } catch (IOException e) {
@@ -70,23 +68,11 @@ public class GitHubConnection {
         }
     }
 
-    private static boolean isEpic(GHIssue issue) throws QuarkusPlanningException {
 
-        try {
-            for (GHLabel label : issue.getLabels()) {
-                if (label.getName().equals("Epic")) {
-                    return true;
-                }
-            }
-            return false;
-        } catch (IOException e) {
-            throw new QuarkusPlanningException("Error looking up labels on issue" , e);
-        }
-    }
-
-    private static List<GHSubTask> parseSubTasksFromDescription(GHIssue issue) throws QuarkusPlanningException {
+    private List<GHSubTask> parseSubTasksFromDescription(GHIssue issue) throws QuarkusPlanningException {
 
         List<GHSubTask> subTasks = new ArrayList<>();
+        GHRepository ghRepository = ghRepositoryLookupCache.lookupByIssue(issue);
 
         Pattern checklistPattern = Pattern.compile("- \\[([ x])](.*)");
         Pattern issueIDPattern = Pattern.compile("#(\\d+)");
@@ -102,7 +88,8 @@ public class GitHubConnection {
             GHIssue linkedIssue = null;
             if (issueIDMatcher.find()) {
                 try {
-                    linkedIssue = issue.getRepository().getIssue(parseIssueID(issueIDMatcher.group(1)));
+                    Integer linkedIssueIDInteger = parseIssueID(issueIDMatcher.group(1));
+                    linkedIssue = ghRepository.getIssue(linkedIssueIDInteger);
                 } catch (IOException e) {
                     throw new QuarkusPlanningException("Error looking up linked issue", e);
                 }
@@ -114,7 +101,7 @@ public class GitHubConnection {
     }
 
 
-    private static int parseIssueID(String issueId) throws QuarkusPlanningException {
+    private int parseIssueID(String issueId) throws QuarkusPlanningException {
         try {
             int issueIdInt = Integer.parseInt(issueId);
 
@@ -128,7 +115,7 @@ public class GitHubConnection {
         }
     }
 
-    private static boolean parseChecklistState(String checkListState) throws  QuarkusPlanningException {
+    private boolean parseChecklistState(String checkListState) throws  QuarkusPlanningException {
 
         if (!checkListState.equals("") && !checkListState.equals("x")) {
             throw new QuarkusPlanningException("Unexpected checklist state: '" + checkListState + "'");
